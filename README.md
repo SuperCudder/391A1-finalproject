@@ -1,7 +1,7 @@
 #AutoClutch
 Daily automotive guessing games running off of the DOT's NHTSA API
 
-##AutoGuessr 
+##AutoGuessr
 Guess the car's make model and year given an outlined photo that slowly reveals the vehicle of the day.
 
 ##AutoRank
