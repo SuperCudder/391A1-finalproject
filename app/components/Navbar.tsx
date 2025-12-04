@@ -24,7 +24,7 @@ export default function Navbar() {
                         AutoRank
                     </Link>
                     <Link
-                        href="/"
+                        href="/autoguessr"
                         className="hover:text-emerald-400"
                     >
                         AutoGuessr
