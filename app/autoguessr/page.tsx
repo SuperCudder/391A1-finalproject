@@ -151,19 +151,55 @@ export default function AutoGuessrPage() {
     return false;
   };
 
+  /*calculates how many edits it takes to turn one word into another*/
+    /*allows for model feedback, if the car is 325i but the user guessed 330i lets them knwo theyre close*/
+  const levenshtein = (a: string, b: string): number => {
+    const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b[i - 1] === a[j - 1]) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, /* deletion*/
+            matrix[i][j - 1] + 1,     /* insertion*/
+            matrix[i - 1][j] + 1      /* substitution*/
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  };
+
   const handleGuess = () => {
     if (!dailyCar || !currentGuess.make || !currentGuess.model || !currentGuess.year) {
       return;
     }
 
-    /*guess calc */
+    /*calculate similarity for the model*/
+    const guessNorm = normalizeString(currentGuess.model);
+    const targetNorm = normalizeString(dailyCar.model);
+    const dist = levenshtein(guessNorm, targetNorm);
+    const len = Math.max(guessNorm.length, targetNorm.length);
+
+    /*close if one contains the other like Civic inside Civic Type R)
+       or diff is small <=2 or half the len*/
+    const isModelClose =
+      (guessNorm.length > 2 && targetNorm.includes(guessNorm)) ||
+      (targetNorm.length > 2 && guessNorm.includes(targetNorm)) ||
+      (len > 0 && dist <= 2 && (dist / len) < 0.5);
+
     const feedback = {
       make: lingoMatch(currentGuess.make, dailyCar.make)
         ? "correct" as const
         : "wrong" as const,
       model: lingoMatch(currentGuess.model, dailyCar.model)
         ? "correct" as const
-        : "wrong" as const,
+        : isModelClose
+          ? "close" as const
+          : "wrong" as const,
       year: currentGuess.year === dailyCar.year
         ? "correct" as const
         : Math.abs(parseInt(currentGuess.year) - parseInt(dailyCar.year)) <= 5
@@ -541,7 +577,7 @@ export default function AutoGuessrPage() {
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded bg-yellow-500"></div>
-                <span>Close (±5 years)</span>
+                <span>Close (±5 years or similar model)</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded bg-slate-600"></div>
