@@ -10,7 +10,11 @@
     "test": "vitest"
   },
   "dependencies": {
-    "next": "16.0.3",
+    "@auth/prisma-adapter": "^2.11.1",
+    "@prisma/client": "^5.22.0",
+    "next": "^16.0.7",
+    "next-auth": "^4.24.13",
+    "prisma": "^5.22.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },

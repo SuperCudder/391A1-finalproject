@@ -1,3 +1,7 @@
+/**
+ * Author: Lucas Lotze
+*/
+
 import { NextResponse } from 'next/server';
 
 const CARQUERY_API = 'https://www.carqueryapi.com/api/0.3/';

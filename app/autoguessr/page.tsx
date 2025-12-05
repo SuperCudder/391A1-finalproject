@@ -226,8 +226,10 @@ export default function AutoGuessrPage() {
     /*check if they guessed correct*/
     if (feedback.make === "correct" && feedback.model === "correct" && feedback.year === "correct") {
       setGameState("won");
+      updateStreak(true);
     } else if (newGuesses.length >= MAX_GUESSES) {
       setGameState("lost");
+      updateStreak(false);
     }
 
     /*reset*/
@@ -307,6 +309,15 @@ export default function AutoGuessrPage() {
       const specsToShow = Math.min(4 + Math.floor(guesses.length / 2), sortedSpecs.length);
       return sortedSpecs.slice(0, specsToShow);
     }
+  };
+
+  // Call this when the game ends
+  const updateStreak = async (won: boolean) => {
+    await fetch("/api/stats/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ game: "autoguessr", won }),
+    });
   };
 
   return (
