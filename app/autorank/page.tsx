@@ -102,6 +102,16 @@ export default function AutoRankPage() {
                 ? "✅ Correct! You nailed the horsepower ranking."
                 : "❌ Not quite. Try a different order!"
         );
+
+        updateStreak(isCorrect);
+    };
+
+    const updateStreak = async (won: boolean) => {
+        await fetch("/api/stats/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ game: "autorank", won }),
+        });
     };
 
     const handleNewRound = () => {
