@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import Autocomplete from "../components/Autocomplete";
 
 type DailyCar = { /*api elem to cal*/
   model_id: string;
@@ -44,6 +45,7 @@ type Guess = {
     model: "correct" | "close" | "wrong";
     year: "correct" | "close" | "wrong";
   };
+  yearDirection?: "higher" | "lower"; /*directional hint for guess*/
 };
 
 type Difficulty = "easy" | "medium" | "hard";
@@ -61,6 +63,16 @@ export default function AutoGuessrPage() {
 
   const MAX_GUESSES = 6;
 
+  /*seeded random for spec shuffle*/
+  const seededRandom = (seed: number) => {
+    return () => {
+      seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), seed | 1);
+      t = (t + Math.imul(t ^ (t >>> 7), t | 61)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+
   /*after diff selected get dailt car*/
   useEffect(() => {
     if (!difficulty) return;
@@ -70,7 +82,7 @@ export default function AutoGuessrPage() {
         setLoading(true);
         setError(null);
 
-        /*dailt car fetch*/
+        /*daily car fetch*/
         const response = await fetch("/api/autoguessr/random-car");
         if (!response.ok) {
           throw new Error("Failed to fetch daily car");
@@ -103,30 +115,73 @@ export default function AutoGuessrPage() {
     setDifficulty(diff);
   };
 
+  /*normalize strings*/
+  const normalizeString = (str: string): string => {
+    return str
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") /*remove accents*/
+      .replace(/[\s\-_]/g, ''); /*remove separators*/
+  };
+
+  /*common lingo for car makes*/
+  const brandAliases: { [key: string]: string } = {
+    'chevy': 'chevrolet',
+    'vw': 'volkswagen',
+    'merc': 'mercedes',
+    'mercedesbenz': 'mercedes',
+    'benz': 'mercedes',
+    'beemer': 'bmw',
+    'bimmer': 'bmw',
+    'caddy': 'cadillac',
+    'alfa': 'alfaromeo',
+  };
+
+  /*check if two strings match */
+  const lingoMatch = (input: string, target: string): boolean => {
+    const normalizedInput = normalizeString(input);
+    const normalizedTarget = normalizeString(target);
+
+    /*exact match*/
+    if (normalizedInput === normalizedTarget) return true;
+
+    /*check if input is lingo*/
+    const resolvedInput = brandAliases[normalizedInput] || normalizedInput;
+    if (resolvedInput === normalizedTarget) return true;
+
+    return false;
+  };
 
   const handleGuess = () => {
     if (!dailyCar || !currentGuess.make || !currentGuess.model || !currentGuess.year) {
       return;
     }
 
-    /*guess calculation*/
+    /*guess calc */
     const feedback = {
-      make: currentGuess.make.toLowerCase() === dailyCar.make.toLowerCase()
+      make: lingoMatch(currentGuess.make, dailyCar.make)
         ? "correct" as const
         : "wrong" as const,
-      model: currentGuess.model.toLowerCase() === dailyCar.model.toLowerCase()
+      model: lingoMatch(currentGuess.model, dailyCar.model)
         ? "correct" as const
         : "wrong" as const,
       year: currentGuess.year === dailyCar.year
         ? "correct" as const
-        : Math.abs(parseInt(currentGuess.year) - parseInt(dailyCar.year)) <= 2
+        : Math.abs(parseInt(currentGuess.year) - parseInt(dailyCar.year)) <= 5
         ? "close" as const
         : "wrong" as const,
     };
 
+    /*calculate directional hint for year*/
+    const yearDirection = feedback.year !== "correct"
+      ? parseInt(currentGuess.year) < parseInt(dailyCar.year)
+        ? "higher" as const
+        : "lower" as const
+      : undefined;
+
     const newGuess: Guess = {
       ...currentGuess,
       feedback,
+      yearDirection,
     };
 
     const newGuesses = [...guesses, newGuess];
@@ -143,7 +198,7 @@ export default function AutoGuessrPage() {
     setCurrentGuess({ make: "", model: "", year: "" });
   };
 
-  /*depending on how close their guess is, give feedback, yellow if close, green if correct*/
+  /*depending on guess: yellow if close green if correct*/
   const getFeedbackColor = (status: "correct" | "close" | "wrong") => {
     switch (status) {
       case "correct":
@@ -155,36 +210,66 @@ export default function AutoGuessrPage() {
     }
   };
 
-  /*handle specs depending on diff and guess num*/
-  const getVisibleSpecs = () => {
-    if (!carDetails) return [];
+  /*memoize specs so no render reshuffle*/
+  const sortedSpecs = useMemo(() => {
+    if (!carDetails || !dailyCar) return [];
+
+    /*calculate decade from year*/
+    const decade = carDetails.model_year
+      ? `${Math.floor(parseInt(carDetails.model_year) / 10) * 10}s`
+      : null;
 
     const allSpecs = [
-      { label: "Country", value: carDetails.make_country },
-      { label: "Engine Size", value: carDetails.model_engine_l ? `${carDetails.model_engine_l}L` : null },
-      { label: "Cylinders", value: carDetails.model_engine_cyl },
-      { label: "Engine Type", value: carDetails.model_engine_type },
-      { label: "Horsepower", value: carDetails.model_engine_power_hp ? `${carDetails.model_engine_power_hp} hp` : null },
-      { label: "Top Speed", value: carDetails.model_top_speed_mph ? `${carDetails.model_top_speed_mph} mph` : null },
-      { label: "Weight", value: carDetails.model_weight_lbs ? `${carDetails.model_weight_lbs} lbs` : null },
-      { label: "Body Style", value: carDetails.model_body },
-      { label: "Drive Type", value: carDetails.model_drive },
-      { label: "Transmission", value: carDetails.model_transmission_type },
-      { label: "Seats", value: carDetails.model_seats },
-      { label: "Doors", value: carDetails.model_doors },
+      { label: "Country", value: carDetails.make_country, priority: 3 },
+      { label: "Decade", value: decade, priority: 3 },
+      { label: "Engine Size", value: carDetails.model_engine_l ? `${carDetails.model_engine_l}L` : null, priority: 2 },
+      { label: "Cylinders", value: carDetails.model_engine_cyl, priority: 1 },
+      { label: "Engine Type", value: carDetails.model_engine_type, priority: 2 },
+      { label: "Horsepower", value: carDetails.model_engine_power_hp ? `${carDetails.model_engine_power_hp} hp` : null, priority: 3 },
+      { label: "Top Speed", value: carDetails.model_top_speed_mph ? `${carDetails.model_top_speed_mph} mph` : null, priority: 3 },
+      { label: "Weight", value: carDetails.model_weight_lbs ? `${carDetails.model_weight_lbs} lbs` : null, priority: 2 },
+      { label: "Body Style", value: carDetails.model_body, priority: 3 },
+      { label: "Drive Type", value: carDetails.model_drive, priority: 3 },
+      { label: "Transmission", value: carDetails.model_transmission_type, priority: 2 },
+      { label: "Seats", value: carDetails.model_seats, priority: 1 },
+      { label: "Doors", value: carDetails.model_doors, priority: 1 },
     ].filter(spec => spec.value && spec.value !== "null");
 
+    /*use seeded rand for shuffling*/
+    const rng = seededRandom(dailyCar.seed);
+
+    /*group by priority*/
+    const grouped = new Map<number, typeof allSpecs>();
+    allSpecs.forEach(spec => {
+      if (!grouped.has(spec.priority)) grouped.set(spec.priority, []);
+      grouped.get(spec.priority)!.push(spec);
+    });
+
+    /*shuffle prio using seeded rand*/
+    grouped.forEach((specs) => {
+      for (let i = specs.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [specs[i], specs[j]] = [specs[j], specs[i]];
+      }
+    });
+
+    /*priov order high to low*/
+    return [3, 2, 1].flatMap(priority => grouped.get(priority) || []);
+  }, [carDetails, dailyCar]);
+
+  /*handle specs depending on diff and guess num*/
+  const getVisibleSpecs = () => {
     if (difficulty === "hard") {
       /*hard show only 3 specs never reveal more*/
-      return allSpecs.slice(0, 3);
+      return sortedSpecs.slice(0, 3);
     } else if (difficulty === "easy") {
       /*easy start with 5 specs reveal 1 more with each wrong guess*/
-      const specsToShow = Math.min(5 + guesses.length, allSpecs.length);
-      return allSpecs.slice(0, specsToShow);
+      const specsToShow = Math.min(5 + guesses.length, sortedSpecs.length);
+      return sortedSpecs.slice(0, specsToShow);
     } else {
       /* medium start with 4 specs reveal 1 more every 2 wrong guesses*/
-      const specsToShow = Math.min(4 + Math.floor(guesses.length / 2), allSpecs.length);
-      return allSpecs.slice(0, specsToShow);
+      const specsToShow = Math.min(4 + Math.floor(guesses.length / 2), sortedSpecs.length);
+      return sortedSpecs.slice(0, specsToShow);
     }
   };
 
@@ -348,7 +433,7 @@ export default function AutoGuessrPage() {
                         {guess.model}
                       </div>
                       <div className={`px-3 py-2 rounded-lg text-center text-sm font-medium ${getFeedbackColor(guess.feedback.year)}`}>
-                        {guess.year}
+                        {guess.year} {guess.yearDirection && (guess.yearDirection === "higher" ? "↑" : "↓")}
                       </div>
                     </div>
                   ))}
@@ -361,19 +446,18 @@ export default function AutoGuessrPage() {
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-slate-400">Make Your Guess</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Make"
+                  <Autocomplete
                     value={currentGuess.make}
-                    onChange={(e) => setCurrentGuess({ ...currentGuess, make: e.target.value })}
-                    className="px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onChange={(value) => setCurrentGuess({ ...currentGuess, make: value })}
+                    placeholder="Make"
+                    searchType="make"
                   />
-                  <input
-                    type="text"
-                    placeholder="Model"
+                  <Autocomplete
                     value={currentGuess.model}
-                    onChange={(e) => setCurrentGuess({ ...currentGuess, model: e.target.value })}
-                    className="px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onChange={(value) => setCurrentGuess({ ...currentGuess, model: value })}
+                    placeholder="Model"
+                    searchType="model"
+                    make={currentGuess.make}
                   />
                   <input
                     type="text"
@@ -383,13 +467,21 @@ export default function AutoGuessrPage() {
                     className="px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
-                <button
-                  onClick={handleGuess}
-                  disabled={!currentGuess.make || !currentGuess.model || !currentGuess.year}
-                  className="w-full px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm disabled:opacity-60 disabled:hover:bg-emerald-500 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  Submit Guess ({guesses.length + 1}/{MAX_GUESSES})
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleGuess}
+                    disabled={!currentGuess.make || !currentGuess.model || !currentGuess.year}
+                    className="flex-1 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm disabled:opacity-60 disabled:hover:bg-emerald-500 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    Submit Guess ({guesses.length + 1}/{MAX_GUESSES})
+                  </button>
+                  <button
+                    onClick={() => setGameState("lost")}
+                    className="px-5 py-2.5 rounded-xl border border-slate-500 text-slate-300 hover:bg-slate-700 font-semibold text-sm cursor-pointer"
+                  >
+                    Give Up
+                  </button>
+                </div>
               </div>
             )}
 
@@ -438,7 +530,7 @@ export default function AutoGuessrPage() {
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded bg-yellow-500"></div>
-                <span>Close (±2 years)</span>
+                <span>Close (±5 years)</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 rounded bg-slate-600"></div>

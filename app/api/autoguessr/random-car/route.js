@@ -42,8 +42,12 @@ export async function GET(request) {
       throw new Error('Failed to fetch years from CarQuery API');
     }
     const yearsData = await yearsRes.json();
-    const minYear = parseInt(yearsData.Years.min_year, 10);
-    const maxYear = parseInt(yearsData.Years.max_year, 10);
+    const apiMinYear = parseInt(yearsData.Years.min_year, 10);
+    const apiMaxYear = parseInt(yearsData.Years.max_year, 10);
+
+    /* restrict year to 1970-today*/
+    const minYear = Math.max(1970, apiMinYear);
+    const maxYear = apiMaxYear; /* use current year from API*/
     const year = getSeededRandomInt(minYear, maxYear, rng);
 
     /* get makes for that year*/
