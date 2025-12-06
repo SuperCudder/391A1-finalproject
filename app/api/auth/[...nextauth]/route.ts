@@ -2,12 +2,12 @@
  * Author: Lucas Lotze
 */
 
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/app/lib/prisma";
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
@@ -21,12 +21,12 @@ export const authOptions = {
   callbacks: {
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token?.sub;
+        session.user.id = token?.sub as string;
       }
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET, // Add this line
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
