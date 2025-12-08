@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation"; 
 
 export default function Navbar() {
     const { data: session, status } = useSession();
+    const router = useRouter(); 
+
+    // When logging out, redirect to home page
+    const handleLogout = async () => {
+        await signOut({ redirect: false });
+        router.push("/");
+    };
 
     return (
         <nav className="w-full bg-slate-800 border-b border-slate-700 text-slate-100">
@@ -28,7 +36,7 @@ export default function Navbar() {
                                 Stats
                             </Link>
                             <button
-                                onClick={() => signOut()}
+                                onClick={handleLogout}
                                 className="hover:text-emerald-400 bg-transparent border-none cursor-pointer"
                             >
                                 Logout

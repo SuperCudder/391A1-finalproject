@@ -26,11 +26,11 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold mb-6">Sign in to AutoGames</h1>
         {/* Button triggers Google OAuth sign-in */}
         <button
-          onClick={() => signIn("google")}
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold px-6 py-3 rounded-lg"
-        >
-          Sign in with Google
-        </button>
+        onClick={() => signIn("google")}
+        className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold px-6 py-3 rounded-lg cursor-pointer"
+      >
+        Sign in with Google
+      </button>
       </div>
     </div>
   );
