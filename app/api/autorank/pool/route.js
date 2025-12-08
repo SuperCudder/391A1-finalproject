@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 
 const CARQUERY_API = 'https://www.carqueryapi.com/api/0.3/';
 
-/*convert stat filter to api param*/
+/* Converts stat filter to API parameter */
 function statToParam(stat) {
   switch (stat) {
     case 'horsepower':
@@ -20,27 +20,29 @@ function statToParam(stat) {
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const stat = searchParams.get('stat') || 'horsepower';
-  const count = parseInt(searchParams.get('count') || '5', 10);
+  const stat = searchParams.get('stat') || 'horsepower'; // Get stat filter from query
+  const count = parseInt(searchParams.get('count') || '5', 10); // Get count from query
 
-  /*get available years*/
+  /* Fetch available years from API */
   const yearsRes = await fetch(`${CARQUERY_API}?cmd=getYears`);
   const yearsData = await yearsRes.json();
   const apiMinYear = parseInt(yearsData.Years.min_year, 10);
   const apiMaxYear = parseInt(yearsData.Years.max_year, 10);
 
-  /*restrict range: 1970-today*/
+  /* Restrict year range to 1970-today */
   const minYear = Math.max(1970, apiMinYear);
   const maxYear = apiMaxYear;
   const year = Math.floor(Math.random() * (maxYear - minYear + 1)) + minYear;
 
   const statParam = statToParam(stat);
+  /* Fetch car trims matching filters */
   const trimsRes = await fetch(`${CARQUERY_API}?cmd=getTrims&year=${year}&${statParam}&sold_in_us=1`);
   const trimsData = await trimsRes.json();
   let trims = trimsData.Trims || [];
 
-  /* shuffle and pick */
+  /* Shuffle and pick random cars */
   trims = trims.sort(() => 0.5 - Math.random()).slice(0, count);
 
+  /* Return selected trims */
   return NextResponse.json(trims);
 }

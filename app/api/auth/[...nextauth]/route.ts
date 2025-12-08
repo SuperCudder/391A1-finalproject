@@ -7,8 +7,9 @@ import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/app/lib/prisma";
 
+// NextAuth configuration options
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma), // Use Prisma adapter for DB integration
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -16,9 +17,10 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: {
-    strategy: "jwt" as const,
+    strategy: "jwt" as const, // Use JWT for session management
   },
   callbacks: {
+    // Attach user id to session object
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token?.sub as string;
@@ -26,8 +28,9 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET, // Secret for signing JWTs
 };
 
+// Export NextAuth handler for GET and POST requests
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

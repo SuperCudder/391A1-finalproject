@@ -1,3 +1,7 @@
+/**
+ * Author: Lucas Lotze
+*/
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +11,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Stores OAuth account info for each user (Google, etc.)
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -26,6 +31,7 @@ model Account {
   @@unique([provider, providerAccountId])
 }
 
+// Stores user session tokens for authentication
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -34,6 +40,7 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Stores user profile and game stats
 model User {
   id                      String    @id @default(cuid())
   email                   String    @unique
@@ -48,6 +55,7 @@ model User {
   sessions                Session[]
 }
 
+// Stores tokens for email verification and passwordless login
 model VerificationToken {
   identifier String
   token      String   @unique
