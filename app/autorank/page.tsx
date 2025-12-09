@@ -1,5 +1,7 @@
 "use client";
 
+// Author: Michael Gorman (gorman@bu.edu)
+
 import { useEffect, useState } from "react";
 
 type PoolCar = {
@@ -14,12 +16,14 @@ type PoolCar = {
 const STAT = "horsepower";
 
 export default function AutoRankPage() {
+    // pool = list of cars loaded for the round
+    // order = order of car IDs that the user rearranges
     const [pool, setPool] = useState<PoolCar[]>([]);
     const [order, setOrder] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [checking, setChecking] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [result, setResult] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true); // shows loading screen
+    const [checking, setChecking] = useState(false); // used for checking the ranking
+    const [error, setError] = useState<string | null>(null); // error message if fetch fails
+    const [result, setResult] = useState<string | null>(null); // result text for correct / incorrect
 
     // Load a pool of cars on first render
     useEffect(() => {
@@ -29,11 +33,13 @@ export default function AutoRankPage() {
                 setError(null);
                 setResult(null);
 
+                // request 4 random cars from API
                 const res = await fetch(`/api/autorank/pool?stat=${STAT}&count=4`);
                 if (!res.ok) {
                     throw new Error("Failed to load pool");
                 }
 
+                // save cars in state + set initial ordering
                 const data: PoolCar[] = await res.json();
                 setPool(data);
                 setOrder(data.map((c) => c.model_id));
@@ -46,10 +52,11 @@ export default function AutoRankPage() {
         };
 
         loadPool();
-    }, []);
+    }, []); // only runs once
 
+    // move a car up in the list
     const moveUp = (index: number) => {
-        if (index === 0) return;
+        if (index === 0) return; // can't move first item up
 
         setOrder((prev) => {
             const copy = [...prev];
@@ -57,11 +64,12 @@ export default function AutoRankPage() {
             return copy;
         });
 
-        setResult(null);
+        setResult(null); // reset result after list changes
     };
 
+    // move a car down in the list
     const moveDown = (index: number) => {
-        if (index === order.length - 1) return;
+        if (index === order.length - 1) return; // can't move last item down
 
         setOrder((prev) => {
             const copy = [...prev];
@@ -72,8 +80,10 @@ export default function AutoRankPage() {
         setResult(null);
     };
 
+    // get full car object from ID
     const carFromPool = (id: string) => pool.find((c) => c.model_id === id)!;
 
+    // check is user's ranking is correct
     const handleCheck = () => {
         // No cars
         if (!pool.length) return;
@@ -103,6 +113,7 @@ export default function AutoRankPage() {
                 : "❌ Not quite. Try a different order!"
         );
 
+        // send win/loss result to the stat tracking
         updateStreak(isCorrect);
     };
 
@@ -114,6 +125,7 @@ export default function AutoRankPage() {
         });
     };
 
+    // refresh page to handle new round
     const handleNewRound = () => {
         window.location.reload();
     };
