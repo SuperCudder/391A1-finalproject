@@ -1,3 +1,7 @@
+/**
+ * Author: Jonah Kastelic
+ */
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";

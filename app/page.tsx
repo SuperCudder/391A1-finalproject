@@ -1,3 +1,7 @@
+/**
+ * Author: Jonah Kastelic
+ */
+
 import Link from "next/link";
 
 export default function Home() {

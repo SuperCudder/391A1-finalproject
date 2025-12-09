@@ -1,3 +1,7 @@
+/**
+ * Author: Lucas Lotze
+ */
+
 import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {

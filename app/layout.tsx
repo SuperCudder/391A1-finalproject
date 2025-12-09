@@ -1,8 +1,12 @@
+// Author: Michael Gorman (gorman@bu.edu)
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
-import ClientSessionProvider from "./components/ClientSessionProvider"; // <-- Use this
+import ClientSessionProvider from "./components/ClientSessionProvider";
+
+// font config for the app
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

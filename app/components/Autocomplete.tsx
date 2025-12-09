@@ -1,3 +1,7 @@
+/**
+ * Author: Jonah Kastelic
+ */
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";

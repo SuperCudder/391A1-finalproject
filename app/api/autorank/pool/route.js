@@ -1,5 +1,5 @@
 /**
- * Author: Lucas Lotze
+ * Author: Lucas Lotze and Jonah Kastelic
 */
 
 import { NextResponse } from 'next/server';
