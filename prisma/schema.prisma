@@ -1,6 +1,4 @@
-/**
- * Author: Lucas Lotze
-*/
+// Author: Lucas Lotze
 
 generator client {
   provider = "prisma-client-js"
